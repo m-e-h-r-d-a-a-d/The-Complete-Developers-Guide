@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
 )
 
 func main() {
@@ -14,12 +15,25 @@ func main() {
 		"http://amazon.com",
 	}
 
+	c := make(chan string)
+
 	for _, link := range links {
-		checkLink(link)
+		go checkLink(link, c)
+	}
+
+	for l := range c {
+		go func(link string) {
+			time.Sleep(time.Second * 5)
+			checkLink(link, c)
+		}(l)
 	}
 }
 
-func checkLink(link string) {
+func checkLink(link string, c chan string) {
+	defer func() {
+		c <- link
+	}()
+
 	_, err := http.Get(link)
 	if err != nil {
 		fmt.Println(link, "might be down!")
